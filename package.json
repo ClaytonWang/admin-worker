@@ -1,0 +1,17 @@
+{
+  "name": "ll",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --experimental-specifier-resolution=node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "redis": "^4.6.7",
+    "urllib": "^3.17.1"
+  }
+}

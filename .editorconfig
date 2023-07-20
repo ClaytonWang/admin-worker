@@ -1,0 +1,18 @@
+# http://editorconfig.org
+# 表示最顶层的配置文件，发现设置为true时，才会停止查找.editorconfig文件
+root = true
+
+# 对于所有文件，始终在文件最末尾插入一个新行
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+# 对于所有文件，以两个空格为缩进，tab宽度为两个空格
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+[*.md]
+max_line_length = off
+trim_trailing_whitespace = false

@@ -4,9 +4,10 @@
 // import tasks from "./config/tasks.json";
 import AttackHelper from "./AttackHelper.js";
 
-const periodTime = 5000;
-const continuePeriodTime = 3000;
-
+const periodTime = 30000;
+const continuePeriodTime = 5000;
+const storeTime = 2;//2 hore
+const maxStoreMount = 50; //最大库存量
 export default class Worker {
   constructor(token) {
     this.helper = new AttackHelper(token);
@@ -25,58 +26,83 @@ export default class Worker {
     return false;
   }
 
-  async run() {
+  async run(filter, name) {
+
+    //0 到 5点 不查询
+    const isInValidePeriod = this.compareTime(4, 24);
+    if (!isInValidePeriod) {
+      console.log('0到5点时间段选号API下线,不进行任何操作.%s', filter);
+      return;
+    }
+
     await this.helper.init();
     await this.helper.prepareQuery();
 
-    // 预存款条件
-    const iPrestoreFees = ['1', '2', '4', '5', '6'];
+    const loop = async (time) => {
+      setTimeout(async () => {
+        await doAction(filter);
+      }, time);
+    }
 
-    const doActoin = async (iPrestoreFee) => {
+    doAction = async () => {
       //0 到 5点 不查询
       const isInValidePeriod = this.compareTime(4, 24);
       if (!isInValidePeriod) {
-        console.log('当前时间段选号API下线,不进行任何操作.');
+        console.log('0到5点时间段选号API下线,不进行任何操作.%s', filter);
+        await loop(periodTime);
         return;
       }
 
-      const { selectPool: phoneNo, childAccount } = await this.helper.queryNO({ iPrestoreFee });
+      // 当前账号库存满了不查询
+      const storeNum = await this.helper.queryStoreNum(storeTime, name);
+      // 剩余库存量
+      let curStoreMount = maxStoreMount - storeNum.length;
+      console.log('【剩余库存量】：%s', curStoreMount);
 
-      const prettyNums = await this.helper.getPrettyNoFromRule(phoneNo);
+      if (storeNum.length >= maxStoreMount) {
+        console.log('账号%s,库存已满%s,不刷号.%s', name, maxStoreMount, (new Date).toLocaleString());
+        await loop(periodTime);
+        return;
+      }
+
+      const { selectPool: phoneNos } = await this.helper.queryNO(filter);
+      const strType = Object.keys(filter).join() + ":" + Object.values(filter).join();
+      const prettyNums = await this.helper.getPrettyNoFromRule(phoneNos);
       if (prettyNums.length > 0) {
         const noLogs = prettyNums.map(value => {
           return value.item.res_id + '|' + value.rule;
         });
-        console.log('【当前条件"iPrestoreFee:%s"选中的号】：%s', JSON.stringify(noLogs));
+        console.log('【当前条件"iPrestoreFee:%s"选中的号】：%s', filter, JSON.stringify(noLogs));
 
-        ////锁号
-        //const lockedNum = await this.helper.lockNumber(prettyNo);
-        ////入库mysql
-        await this.helper.save(lockedNum, childAccount, 'iPrestoreFee:' + iPrestoreFee);
+        //锁号
+        const lockedNums = await this.helper.lockNumber(prettyNums, curStoreMount);
 
-        setTimeout(async () => {
-          await doActoin(iPrestoreFee);
-        }, periodTime);
+        console.log('【锁号】：%s', '完成');
 
+
+        for (const item of lockedNums) {
+          ////入库mysql
+          await this.helper.save(item, name, strType);
+        }
+        console.log('【入库】：%s', '完成');
+
+        await loop(periodTime);
       } else {
-        console.log('【当前条件"iPrestoreFee:%s"没有靓号】：%s', iPrestoreFee, (new Date).toLocaleString());
-
-        //没找到靓号,隔3秒后继续找
-        setTimeout(async () => {
-          await doActoin(iPrestoreFee);
-        }, continuePeriodTime);
+        console.log('【当前条件"%s"没有靓号】：%s', strType, (new Date).toLocaleString());
+        //没找到靓号,隔5秒后继续找
+        await loop(continuePeriodTime);
       }
     }
 
-    // for (const iPrestoreFee of iPrestoreFees) {
-    //   setTimeout(async (iPrestoreFee) => {
-    //     await doActoin(iPrestoreFee);
-    //   }, periodTime);
-    // }
-
-    setTimeout(async () => {
-      await doActoin('1');
-    }, periodTime);
-
+    await doAction(filter);
   }
 }
+
+process.on("message", async ({ token, name, filter }) => {
+  try {
+    const w = new Worker(token)
+    await w.run(filter, name);
+  } catch (error) {
+    console.log('错误:%s', error)
+  }
+});

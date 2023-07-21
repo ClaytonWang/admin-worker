@@ -57,17 +57,20 @@ class AttackHelper {
     return prettyNums;
   }
 
-  async lockNumber(prettyNo) {
+  async lockNumber(prettyNos, curStoreMount) {
     const lockedNumb = [];
     //锁号
-    for (const item of prettyNo) {
+    for (let i = 0; i < curStoreMount; i++) {
+      const { item } = prettyNos[i]
+      const { res_id } = item;
       try {
-        await this.attacker.attackNumber(this.sessionId, item.phone);
+        await this.attacker.attackNumber(this.sessionId, res_id);
+        console.log('【锁号...】：%s', res_id);
         lockedNumb.push(item);
         // 锁号完,调页面接口
-        await this.attacker.afterAttackNum(this.sessionId, item.phone);
+        await this.attacker.afterAttackNum(this.sessionId, res_id);
       } catch (error) {
-        console.log('【锁号失败】：%s', item.phone);
+        console.log('【锁号失败】：%s', res_id);
         console.log('【错误信息】：%s', error);
       }
     }
@@ -78,16 +81,31 @@ class AttackHelper {
     await redis.setKey(name, value, ex, time);//设置
   }
 
-  async getKey(name) {
-    return await redis.getKey(name);//获取key
+  async getKey(key) {
+    return await redis.getKey(key);//获取key
+  }
+
+  async delKey(key) {
+    return await redis.delKey(key);//获取key
   }
 
   //入库mysql
   async save(lockedNum, childAccount, type) {
-    const { } = lockedNum.item;
+    const { res_id } = lockedNum;
     let sql = "INSERT INTO number_detail(phone_num,busi_type,detail_json,create_by,update_by) VALUES (?, ?, ?, ?, ?);"
-    let addSqlParams = [res_id, type, JSON.stringify(item), childAccount, childAccount];
+    let addSqlParams = [res_id, type, JSON.stringify(lockedNum), childAccount, childAccount];
     return await query(sql, addSqlParams)
+  }
+
+  // 查询2小时内库存
+  async queryStoreNum(hours = 2, childAccount) {
+    let sqlStr = `select num_id from number_detail
+                where create_by = ?
+                AND create_time between date_format(now(),'%Y-%m-%d %H:00:00')
+                AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:00:00'),interval ${hours} hour)`;
+
+    let addSqlParams = [childAccount];
+    return await query(sqlStr, addSqlParams)
   }
 }
 

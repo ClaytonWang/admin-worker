@@ -45,7 +45,7 @@ export default class AttackNumber {
     if (rslt && rslt.data) {
       const { code, msg } = rslt.data;
       if (code === RESULT_LOGIN_FAIL || code === '-1') {
-        throw new Error(msg);
+        throw new GlobalError(RESULT_FAIL, msg);
       }
     }
     return rslt;
@@ -152,9 +152,6 @@ export default class AttackNumber {
       },
     };
     const result = await this.curlHandler(params);
-    // await this.jobHandlerLog.log('任务perpareAttackNumber，状态码：{0}', result.status);
-    // await this.jobHandlerLog.log('任务perpareAttackNumber，响应数据：{0}', JSON.stringify(result.data));
-    // await this.jobHandlerLog.log('任务perpareAttackNumber，请求数据：{0}', JSON.stringify(params));
     return result;
   }
 
@@ -174,7 +171,7 @@ export default class AttackNumber {
         checkednumber: pNumber,
       },
       headers: {
-        Pragma: 'no - cache',
+        Pragma: 'no-cache',
         'Cache-Control': 'no-cache',
         Accept: 'application/json, text/plain, */*',
         menuId: '60021183',
@@ -190,10 +187,8 @@ export default class AttackNumber {
         'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
       },
     };
-    const result = await this.curlHandler(params);
-    // await this.jobHandlerLog.log('任务attackNumber，状态码：{0}', result.status);
-    // await this.jobHandlerLog.log('任务attackNumber，响应数据：{0}', JSON.stringify(result.data));
-    // await this.jobHandlerLog.log('任务attackNumber，请求数据：{0}', JSON.stringify(params));
+    // const result = await this.curlHandler(params);
+    const result = [];
     return result;
   }
 

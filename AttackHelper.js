@@ -1,9 +1,10 @@
 'use strict';
 
 import AttackNumber from './AttackNumber';
-import redis from './redis';
+import redis from './db/redis';
 import CONSTANTS from './constants';
 import REDIS from './constants/redis';
+import query from './db/mysql';
 
 const { ADMIN_PREFIX, JSESSION_EXPIRE_TIME } = REDIS;
 const { FILERPARAMS } = CONSTANTS;
@@ -30,7 +31,7 @@ class AttackHelper {
       console.log('【第一次302跳转页面】：%s', '完成');
 
       // 超时,自动 重新拿JSESSIONID
-      await this.attacker.sendLocation(this.sessionId);
+      this.sessionId = await this.attacker.sendLocation(this.sessionId);
       console.log('【第二次发送位置】：%s', '完成');
 
       // 保存缓存
@@ -52,12 +53,8 @@ class AttackHelper {
 
   async getPrettyNoFromRule(phoneNumbs) {
     // 按规则,过滤出靓号
-    const prettyNo = await this.attacker.getSelectPhNumByRule(phoneNumbs);
-    const noLogs = prettyNo.map(value => {
-      return value.item.res_id + '|' + value.rule;
-    });
-    console.log('【选中的号】：%s', prettyNo.length === 0 ? '当前条件没有靓号' : JSON.stringify(noLogs));
-    return prettyNo;
+    const prettyNums = await this.attacker.getSelectPhNumByRule(phoneNumbs);
+    return prettyNums;
   }
 
   async lockNumber(prettyNo) {
@@ -77,8 +74,8 @@ class AttackHelper {
     return lockedNumb;
   }
 
-  async setKey(name, value) {
-    await redis.setKey(name, value);//设置
+  async setKey(name, value, ex, time) {
+    await redis.setKey(name, value, ex, time);//设置
   }
 
   async getKey(name) {
@@ -86,8 +83,11 @@ class AttackHelper {
   }
 
   //入库mysql
-  async save() {
-
+  async save(lockedNum, childAccount, type) {
+    const { } = lockedNum.item;
+    let sql = "INSERT INTO number_detail(phone_num,busi_type,detail_json,create_by,update_by) VALUES (?, ?, ?, ?, ?);"
+    let addSqlParams = [res_id, type, JSON.stringify(item), childAccount, childAccount];
+    return await query(sql, addSqlParams)
   }
 }
 

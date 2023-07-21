@@ -15,7 +15,7 @@ const url = `redis://:${redis_config.password}@${redis_config.host}:${redis_conf
 const redisClient = redis.createClient({ 'url': url })
 
 redisClient.on('ready', () => {
-  console.log('redis is ready...')
+  // console.log('redis is ready...')
 })
 
 redisClient.on('error', err => {

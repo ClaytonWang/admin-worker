@@ -44,7 +44,7 @@ export default class AttackNumber {
     });
     if (rslt && rslt.data) {
       const { code, msg } = rslt.data;
-      if (code === RESULT_LOGIN_FAIL) {
+      if (code === RESULT_LOGIN_FAIL || code === '-1') {
         throw new Error(msg);
       }
     }
@@ -78,15 +78,15 @@ export default class AttackNumber {
     };
     const result = await this.curlHandler(params);
     const cookie = result.headers['set-cookie'][0];
+    console.log(cookie);
     return cookie.split(';')[0];
   }
 
   /**
    * 登录成功后第二次请求,用来发送当前app所再的位置,非上海的位置不允许使用
    * 返回ssoToken,JSESSIONID
-   * @param {*} sessionId JSESSIONID
    */
-  async sendLocation(sessionId) {
+  async sendLocation() {
     const location = JSON.stringify({ address: '上海市嘉定区交运路464号', city: '上海市', district: '嘉定区', exeResult: 1, lat: 31.296245, lng: 121.195396, locationType: 'GD', province: '上海市', street: '交运路', streetNumber: '464号' });
     const device = JSON.stringify({ device: { appVersion: '1.9.4.3', availMemory: '4.15 GB', brand: 'vivo', c_id: '948fdb4b05639667', density: 3, model: 'V2271A', os: 'android', osVersion: 33, totalMemory: '7.81 GB' } });
     const params = {
@@ -111,7 +111,6 @@ export default class AttackNumber {
         Referer: 'http://211.136.111.153:8080/MOP_ac/page-sh/other/',
         'Accept-Encoding': 'gzip, deflate',
         'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-        Cookie: `${sessionId}`,
       },
     };
     const result = await this.curlHandler(params);
@@ -120,6 +119,7 @@ export default class AttackNumber {
       throw Error(msg);
     }
 
+    let sessionId = '';
     if (url && url.length > 0 && url.indexOf('JSESSIONID') !== -1) {
       sessionId = url.split('&')[1];
     }

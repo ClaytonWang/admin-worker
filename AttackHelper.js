@@ -19,10 +19,10 @@ class AttackHelper {
     this.logHandler = null;
   }
 
-  async init(name, type) {
+  async init(logger) {
     this.attacker = new AttackNumber(this.token);
     this.sessionId = await this.getKey(this.redisKey);
-    this.logHandler = new LogHandler(name, type);
+    this.logHandler = logger;
   }
 
   async prepareQuery(force = false) {
@@ -49,7 +49,6 @@ class AttackHelper {
   async queryNO(filer) {
     // 查号码
     const rslt = await this.attacker.searchPhNum(this.sessionId, { ...FILERPARAMS, ...filer });
-    this.logHandler.log('【查号码】：完成');
     return rslt;
   }
 
@@ -59,26 +58,12 @@ class AttackHelper {
     return prettyNums;
   }
 
-  async lockNumber(prettyNos, curStoreMount) {
-    const lockedNumb = [];
-    if (prettyNos.length === 0) return lockedNumb;
+  async lockNumber(res_id) {
+    return await this.attacker.attackNumber(this.sessionId, res_id);
+  }
 
-    const num = prettyNos.length > curStoreMount ? curStoreMount : prettyNos.length;
-    //锁号
-    for (let i = 0; i < num; i++) {
-      const { res_id } = prettyNos[i]
-      try {
-        await this.attacker.attackNumber(this.sessionId, res_id);
-        this.logHandler.log('【锁号...】：' + res_id,);
-        lockedNumb.push(prettyNos[i]);
-        // 锁号完,调页面接口
-        await this.attacker.afterAttackNum(this.sessionId, res_id);
-      } catch (error) {
-        this.logHandler.log('【锁号失败】：' + res_id,);
-        this.logHandler.log(error);
-      }
-    }
-    return lockedNumb;
+  async afterAttackNum() {
+    return await this.attacker.afterAttackNum(this.sessionId, res_id);
   }
 
   async setKey(name, value, time) {

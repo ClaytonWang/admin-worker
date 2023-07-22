@@ -29,11 +29,21 @@ export default class AttackNumber {
     };
   }
 
+  async sleep(time) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log('sleep ' + time)
+        resolve();
+      }, time);
+    });
+  }
+
   /**
    * 调用接口任务
    * @param {*} params 任务参数
    */
   async curlHandler(params) {
+    await this.sleep(1000);
     // 获取参数
     const rslt = await request(params.url, {
       method: params.method,
@@ -186,8 +196,8 @@ export default class AttackNumber {
         'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
       },
     };
-    // const result = await this.curlHandler(params);
-    const result = [];
+    const result = await this.curlHandler(params);
+    // const result = [];
     return result;
   }
 

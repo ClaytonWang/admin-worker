@@ -36,7 +36,7 @@ export default class Worker {
       return;
     }
 
-    await this.helper.init();
+    await this.helper.init(logHandler);
     await this.helper.prepareQuery();
 
     const loop = async (time) => {
@@ -97,7 +97,9 @@ process.on("message", async ({ token, name, filter }) => {
     const w = new Worker(token);
     await w.run(filter, name);
   } catch (error) {
-    console.log('错误:%s', error);
+    const strType = Object.keys(filter).join() + Object.values(filter).join();
+    const logger = new LogHandler(name, 'process/' + strType);
+    logger.log(error);
     process.exit(0);
   }
 });

@@ -40,7 +40,7 @@ export default class Worker {
       return;
     }
 
-    await this.helper.init(name);
+    await this.helper.init(logHandler);
     await this.helper.prepareQuery();
 
     const loop = async (time) => {
@@ -72,25 +72,40 @@ export default class Worker {
       }
 
       const { selectPool: phoneNos } = await this.helper.queryNO(filter);
+      logHandler.log(`【当前条件"${JSON.stringify(filter)}"查出号码】：${phoneNos.length}个,`);
+
+      if (phoneNos.length === 0) {
+        await loop(periodTime);
+        return;
+      }
 
       const prettyNums = await this.helper.getPrettyNoFromRule(phoneNos);
       if (prettyNums.length > 0) {
         const noLogs = prettyNums.map(value => {
           return value.res_id + '|' + value.rule;
         });
-        logHandler.log(`【当前条件"${JSON.stringify(filter)}"选中的号】：${JSON.stringify(noLogs)}`);
+        logHandler.log(`【当前条件"${JSON.stringify(filter)}"选中的靓号${prettyNums.length}个】：${JSON.stringify(noLogs)}`);
 
-        //锁号
-        const lockedNums = await this.helper.lockNumber(prettyNums, curStoreMount);
+        const maxNum = prettyNums.length > curStoreMount ? curStoreMount : prettyNums.length;
 
-        logHandler.log('【锁号】：完成');
+        for (let i = 0; i < maxNum; i++) {
+          const { res_id } = prettyNums[i]
+          try {
+            const rslLock = await this.helper.lockNumber(res_id);
+            logHandler.log('【锁号完成】：' + res_id + "返回:" + JSON.stringify(rslLock));
 
+            //入库mysql
+            await this.helper.save(prettyNums[i], name, strType);
+            logHandler.log('【入库】：完成' + res_id);
 
-        for (const item of lockedNums) {
-          //入库mysql
-          // await this.helper.save(item, name, strType);
+            // 锁号完,调页面接口
+            const aftRsl = await this.helper.afterAttackNum(this.sessionId, res_id);
+            logHandler.log('【AfterLockNum】：' + res_id + "返回:" + JSON.stringify(aftRsl));
+          } catch (error) {
+            logHandler.log('【锁号失败】：' + res_id,);
+            logHandler.log(error);
+          }
         }
-        logHandler.log('【入库】：完成');
 
         await loop(periodTime);
       } else {
@@ -100,7 +115,12 @@ export default class Worker {
       }
     }
 
-    await doAction(filter);
+    try {
+      await doAction(filter);
+    } catch (error) {
+      logHandler.log(error);
+      throw error;
+    }
   }
 }
 
@@ -117,7 +137,9 @@ process.on("message", async ({ token, name, filter, period_time, max_store_mount
     const w = new Worker(token);
     await w.run(filter, name);
   } catch (error) {
-    console.log('错误:%s', error);
-    process.exit(0);
+    const strType = Object.keys(filter).join() + Object.values(filter).join();
+    const logger = new LogHandler(name, 'process/' + strType);
+    logger.log('错误信息' + error);
+    process.exit(1);
   }
 });

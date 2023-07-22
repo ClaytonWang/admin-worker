@@ -11,9 +11,9 @@ export default class LogHandler {
         }),
         format.splat(), // formats level.message based on Node's util.format().
         format.colorize(),
-        format.label({ label: name, type }),
+        format.label({ label: name + "|||" + type }),
         format.errors({ stack: true }),
-        format.printf(({ label, type, message, timestamp }) => `${timestamp} [${label}][${type}] : ${message}`)
+        format.printf(({ label, message, timestamp }) => `${timestamp} [${label}] : ${message}`)
       ),
       transports: [
         new transports.Console(),

@@ -1,5 +1,6 @@
 import { fork } from 'child_process';
 import query from './db/mysql';
+import LogHandler from './logHandler';
 
 //  todo :取配置信息
 async function getConfig() {
@@ -31,7 +32,7 @@ async function getConfig() {
       }
 
       arrConfigs.push({
-        user: conf['name'],
+        name: conf['name'],
         token: conf['token'],
         period_time: conf['period_time'],
         max_store_mount: conf['maxStoreMount'],
@@ -45,29 +46,36 @@ async function getConfig() {
 
 async function bang() {
   try {
-
     const arrConfigs = await getConfig();
     if (arrConfigs.length === 0) {
       console.log('没有配置信息.')
       return;
     }
 
-    for (const { token, name, filters } of arrConfigs) {
+    for (const { token, name, filters, period_time, max_store_mount } of arrConfigs) {
       for (const filter of filters) {
 
-        console.log(filter);
-
+        // console.log(filter);
+        const strType = Object.keys(filter).join() + Object.values(filter).join();
         if (('fuzzyBillId' in filter)) {
-          // const w = fork('./priorityStoreWorker.js');
-          // w.send({ token, name, filter });
+          const w = fork('./priorityStoreWorker.js');
+          w.send({ token, name, filter });
+          w.on('exit', () => {
+            const logger = new LogHandler(name, 'index/' + strType);
+            logger.log('程序' + JSON.stringify(filter) + '报错退出!')
+          });
         } else {
-          // const w = fork('./attackWorker.js');
-          // w.send({ token, name, filter, period_time, max_store_mount });
+          const w = fork('./attackWorker.js');
+          w.send({ token, name, filter, period_time, max_store_mount });
+          w.on('exit', () => {
+            const logger = new LogHandler(name, 'index/' + strType);
+            logger.log('程序' + JSON.stringify(filter) + '报错退出!')
+          });
         }
       }
     }
   } catch (error) {
-    console.log(error)
+    console.error(error)
   }
 }
 

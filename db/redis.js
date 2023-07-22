@@ -31,9 +31,9 @@ async function fun(callback, key, value) {
   })
 }
 
-const setKey = async (key, value) => {
+const setKey = async (key, value, time) => {
   return fun(async () => {
-    return await redisClient.set(key, value)
+    return await redisClient.set(key, value, { EX: time })
   }, key, value)
 };
 

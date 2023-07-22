@@ -78,7 +78,6 @@ export default class AttackNumber {
     };
     const result = await this.curlHandler(params);
     const cookie = result.headers['set-cookie'][0];
-    console.log(cookie);
     return cookie.split(';')[0];
   }
 
@@ -270,7 +269,7 @@ export default class AttackNumber {
         const phone = item.res_id;
 
         if (phone.match(reg) != null && !prettyNums.includes(phone)) {
-          prettyNums.push({ item, rule });
+          prettyNums.push({ ...item, rule });
         }
       }
     }

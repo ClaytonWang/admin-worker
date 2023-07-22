@@ -5,10 +5,10 @@ import redis from './db/redis';
 import CONSTANTS from './constants';
 import REDIS from './constants/redis';
 import query from './db/mysql';
+import LogHandler from "./logHandler.js"
 
 const { ADMIN_PREFIX, JSESSION_EXPIRE_TIME } = REDIS;
 const { FILERPARAMS } = CONSTANTS;
-
 class AttackHelper {
   constructor(token) {
     this.token = token;
@@ -16,11 +16,13 @@ class AttackHelper {
     this.redisKey = '';
     this.attacker = null;
     this.redisKey = ADMIN_PREFIX + token;
+    this.logHandler = null;
   }
 
-  async init() {
+  async init(name, type) {
     this.attacker = new AttackNumber(this.token);
     this.sessionId = await this.getKey(this.redisKey);
+    this.logHandler = new LogHandler(name, type);
   }
 
   async prepareQuery(force = false) {
@@ -28,26 +30,26 @@ class AttackHelper {
     if (!this.sessionId || force) {
       // 第一次302跳转页面
       this.sessionId = await this.attacker.getPage();
-      console.log('【第一次302跳转页面】：%s', '完成');
+      this.logHandler.log('【第一次302跳转页面】：完成');
 
       // 超时,自动 重新拿JSESSIONID
       this.sessionId = await this.attacker.sendLocation(this.sessionId);
-      console.log('【第二次发送位置】：%s', '完成');
+      this.logHandler.log('【第二次发送位置】：完成');
 
       // 保存缓存
-      await this.setKey(this.redisKey, this.sessionId, 'Ex', JSESSION_EXPIRE_TIME);
+      await this.setKey(this.redisKey, this.sessionId, JSESSION_EXPIRE_TIME);
     }
-    console.log('【JSESSIONID】：%s', this.sessionId);
+    this.logHandler.log('【JSESSIONID】：' + this.sessionId);
 
     // 准备页面接口
     await this.attacker.perpareAttackNumber(this.sessionId);
-    console.log('【准备页面接口】：%s', '完成');
+    this.logHandler.log('【准备页面接口】：完成');
   }
 
   async queryNO(filer) {
     // 查号码
     const rslt = await this.attacker.searchPhNum(this.sessionId, { ...FILERPARAMS, ...filer });
-    console.log('【查号码】：%s', '完成');
+    this.logHandler.log('【查号码】：完成');
     return rslt;
   }
 
@@ -59,26 +61,28 @@ class AttackHelper {
 
   async lockNumber(prettyNos, curStoreMount) {
     const lockedNumb = [];
+    if (prettyNos.length === 0) return lockedNumb;
+
+    const num = prettyNos.length > curStoreMount ? curStoreMount : prettyNos.length;
     //锁号
-    for (let i = 0; i < curStoreMount; i++) {
-      const { item } = prettyNos[i]
-      const { res_id } = item;
+    for (let i = 0; i < num; i++) {
+      const { res_id } = prettyNos[i]
       try {
         await this.attacker.attackNumber(this.sessionId, res_id);
-        console.log('【锁号...】：%s', res_id);
-        lockedNumb.push(item);
+        this.logHandler.log('【锁号...】：' + res_id,);
+        lockedNumb.push(prettyNos[i]);
         // 锁号完,调页面接口
         await this.attacker.afterAttackNum(this.sessionId, res_id);
       } catch (error) {
-        console.log('【锁号失败】：%s', res_id);
-        console.log('【错误信息】：%s', error);
+        this.logHandler.log('【锁号失败】：' + res_id,);
+        this.logHandler.log(error);
       }
     }
     return lockedNumb;
   }
 
-  async setKey(name, value, ex, time) {
-    await redis.setKey(name, value, ex, time);//设置
+  async setKey(name, value, time) {
+    await redis.setKey(name, value, time);//设置
   }
 
   async getKey(key) {
@@ -98,12 +102,23 @@ class AttackHelper {
   }
 
   // 查询2小时内库存
-  async queryStoreNum(hours = 2, childAccount) {
+  async queryStoreNum(minute = 31, childAccount) {
     let sqlStr = `select num_id from number_detail
                 where create_by = ?
-                AND create_time between date_format(now(),'%Y-%m-%d %H:00:00')
-                AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:00:00'),interval ${hours} hour)`;
+                AND create_time between date_format(now(),'%Y-%m-%d %H:%i:%s')
+                AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${minute} MINUTE)`;
 
+    let addSqlParams = [childAccount];
+    return await query(sqlStr, addSqlParams)
+  }
+
+  async queryExpireNum(stime, etime, childAccount) {
+    let sqlStr = `select DISTINCT phone_num from number_detail
+                  where create_by = ?
+                  AND create_time BETWEEN DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${stime} MINUTE)
+                  AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${etime} MINUTE)`;
+
+    // let sqlStr = `select phone_num from number_detail where num_id=201`;
     let addSqlParams = [childAccount];
     return await query(sqlStr, addSqlParams)
   }

@@ -3,11 +3,13 @@
 // import users from "./config/users.json";
 // import tasks from "./config/tasks.json";
 import AttackHelper from "./AttackHelper.js";
+import LogHandler from "./logHandler.js"
 
-const periodTime = 30000;
-const continuePeriodTime = 5000;
-const storeTime = 2;//2 hore
-const maxStoreMount = 50; //最大库存量
+let periodTime = 30000;
+let continuePeriodTime = 5000;
+let storeTime = 31;// minute
+let maxStoreMount = 50; //最大库存量
+
 export default class Worker {
   constructor(token) {
     this.helper = new AttackHelper(token);
@@ -27,15 +29,18 @@ export default class Worker {
   }
 
   async run(filter, name) {
+    const strType = Object.keys(filter).join() + ":" + Object.values(filter).join();
+
+    const logHandler = new LogHandler(name, strType);
 
     //0 到 5点 不查询
     const isInValidePeriod = this.compareTime(4, 24);
     if (!isInValidePeriod) {
-      console.log('0到5点时间段选号API下线,不进行任何操作.%s', filter);
+      logHandler.log('0到5点时间段选号API下线,不进行任何操作.');
       return;
     }
 
-    await this.helper.init();
+    await this.helper.init(name);
     await this.helper.prepareQuery();
 
     const loop = async (time) => {
@@ -44,51 +49,52 @@ export default class Worker {
       }, time);
     }
 
-    doAction = async () => {
+    const doAction = async () => {
       //0 到 5点 不查询
       const isInValidePeriod = this.compareTime(4, 24);
       if (!isInValidePeriod) {
-        console.log('0到5点时间段选号API下线,不进行任何操作.%s', filter);
+        logHandler.log('0到5点时间段选号API下线,不进行任何操作.');
         await loop(periodTime);
         return;
       }
 
       // 当前账号库存满了不查询
       const storeNum = await this.helper.queryStoreNum(storeTime, name);
+
       // 剩余库存量
       let curStoreMount = maxStoreMount - storeNum.length;
-      console.log('【剩余库存量】：%s', curStoreMount);
+      logHandler.log('【剩余库存量】：' + curStoreMount);
 
       if (storeNum.length >= maxStoreMount) {
-        console.log('账号%s,库存已满%s,不刷号.%s', name, maxStoreMount, (new Date).toLocaleString());
+        logHandler.log(`库存已满${maxStoreMount},不刷号.`);
         await loop(periodTime);
         return;
       }
 
       const { selectPool: phoneNos } = await this.helper.queryNO(filter);
-      const strType = Object.keys(filter).join() + ":" + Object.values(filter).join();
+
       const prettyNums = await this.helper.getPrettyNoFromRule(phoneNos);
       if (prettyNums.length > 0) {
         const noLogs = prettyNums.map(value => {
-          return value.item.res_id + '|' + value.rule;
+          return value.res_id + '|' + value.rule;
         });
-        console.log('【当前条件"iPrestoreFee:%s"选中的号】：%s', filter, JSON.stringify(noLogs));
+        logHandler.log(`【当前条件"${JSON.stringify(filter)}"选中的号】：${JSON.stringify(noLogs)}`);
 
         //锁号
         const lockedNums = await this.helper.lockNumber(prettyNums, curStoreMount);
 
-        console.log('【锁号】：%s', '完成');
+        logHandler.log('【锁号】：完成');
 
 
         for (const item of lockedNums) {
-          ////入库mysql
-          await this.helper.save(item, name, strType);
+          //入库mysql
+          // await this.helper.save(item, name, strType);
         }
-        console.log('【入库】：%s', '完成');
+        logHandler.log('【入库】：完成');
 
         await loop(periodTime);
       } else {
-        console.log('【当前条件"%s"没有靓号】：%s', strType, (new Date).toLocaleString());
+        logHandler.log(`【当前条件"${strType}"没有靓号】`);
         //没找到靓号,隔5秒后继续找
         await loop(continuePeriodTime);
       }
@@ -98,11 +104,20 @@ export default class Worker {
   }
 }
 
-process.on("message", async ({ token, name, filter }) => {
+process.on("message", async ({ token, name, filter, period_time, max_store_mount }) => {
   try {
-    const w = new Worker(token)
+    if (period_time) {
+      periodTime = period_time;
+    }
+
+    if (max_store_mount) {
+      maxStoreMount = max_store_mount;
+    }
+
+    const w = new Worker(token);
     await w.run(filter, name);
   } catch (error) {
-    console.log('错误:%s', error)
+    console.log('错误:%s', error);
+    process.exit(0);
   }
 });

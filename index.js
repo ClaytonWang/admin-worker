@@ -1,42 +1,80 @@
 import { fork } from 'child_process';
+import query from './db/mysql';
 
-const users = [
-  {
-    name: "dls_bszg00414",
-    token: "TjBHRHYwWFJSVmFieGlwUDhRanJaK0JEYjNLZlRnTk15UTVRY0VpTjNUQ0lqNHRq",
-  }
-];
-const filters = [
-  //预存
-  { iPrestoreFee: ['1', '2', '4', '5', '6'] },
-  //月消费
-  { iMiniFee: "0" },//0以下
-  { iMiniFee: "3000", iMinimumFee: "1" },//30 以下
-  { iMiniFee: ">3000", iMinimumFee: "1" },//30-50
-  { iMinimumFee: "2" },//50-150
-  { iMinimumFee: "3" },//150 - 300
-  { iMinimumFee: "4" }//300上
-];
+//  todo :取配置信息
+async function getConfig() {
+  let arrConfigs = [];
+  const confs = await queryConfig();
+  if (confs && confs.length > 0) {
+    for (const conf of confs) {
+      let filters = [
+        {
+          iPrestoreFee: JSON.parse(conf['prestore_fee']),
+        },
+        { fuzzyBillId: true }
+      ].concat(JSON.parse(conf['mini_fee']));
 
-const arrFilters = [];
-for (const filter of filters) {
-  for (const key in filter) {
-    const value = filter[key];
-    if (Array.isArray(value)) {
-      for (const v of value) {
-        const obj = {};
-        obj[key] = v;
-        arrFilters.push(obj)
+      const arrFilters = [];
+      for (const filter of filters) {
+        for (const key in filter) {
+          const value = filter[key];
+          if (Array.isArray(value)) {
+            for (const v of value) {
+              const obj = {};
+              obj[key] = v;
+              arrFilters.push(obj)
+            }
+          } else if (!arrFilters.includes(filter)) {
+            arrFilters.push(filter)
+          }
+        }
       }
-    } else if (!arrFilters.includes(filter)) {
-      arrFilters.push(filter)
+
+      arrConfigs.push({
+        user: conf['name'],
+        token: conf['token'],
+        period_time: conf['period_time'],
+        max_store_mount: conf['maxStoreMount'],
+        filters: arrFilters,
+      });
     }
   }
+
+  return arrConfigs;
 }
 
-for (const { token, name } of users) {
-  for (const filter of arrFilters) {
-    const w = fork('./worker.js');
-    w.send({ token, name, filter });
+async function bang() {
+  try {
+
+    const arrConfigs = await getConfig();
+    if (arrConfigs.length === 0) {
+      console.log('没有配置信息.')
+      return;
+    }
+
+    for (const { token, name, filters } of arrConfigs) {
+      for (const filter of filters) {
+
+        console.log(filter);
+
+        if (('fuzzyBillId' in filter)) {
+          // const w = fork('./priorityStoreWorker.js');
+          // w.send({ token, name, filter });
+        } else {
+          // const w = fork('./attackWorker.js');
+          // w.send({ token, name, filter, period_time, max_store_mount });
+        }
+      }
+    }
+  } catch (error) {
+    console.log(error)
   }
 }
+
+async function queryConfig() {
+  let sqlStr = `SELECT * from config_detail`;
+  let addSqlParams = [];
+  return await query(sqlStr, addSqlParams)
+}
+
+await bang();

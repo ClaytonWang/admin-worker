@@ -11,9 +11,11 @@ async function getConfig() {
       let filters = [
         {
           iPrestoreFee: JSON.parse(conf['prestore_fee']),
-        },
-        { fuzzyBillId: true }
+        }
       ].concat(JSON.parse(conf['mini_fee']));
+
+      // -------------
+      // filters = [{ iPrestoreFee: ['3'] }]
 
       const arrFilters = [];
       for (const filter of filters) {
@@ -60,16 +62,24 @@ async function bang() {
         if (('fuzzyBillId' in filter)) {
           const w = fork('./priorityStoreWorker.js');
           w.send({ token, name, filter });
-          w.on('exit', () => {
+          w.on('message', (msg) => {
             const logger = new LogHandler(name, 'index/' + strType);
-            logger.log('程序' + JSON.stringify(filter) + '报错退出!')
+
+            if (msg === 'exit') {
+              logger.log('程序' + JSON.stringify(filter) + '报错退出!')
+              w.kill();
+            }
           });
+
         } else {
           const w = fork('./attackWorker.js');
           w.send({ token, name, filter, period_time, max_store_mount });
-          w.on('exit', () => {
+          w.on('message', (msg) => {
             const logger = new LogHandler(name, 'index/' + strType);
-            logger.log('程序' + JSON.stringify(filter) + '报错退出!')
+            if (msg === 'exit') {
+              logger.log('程序' + JSON.stringify(filter) + '报错退出!')
+              w.kill();
+            }
           });
         }
       }

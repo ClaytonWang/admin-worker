@@ -5,7 +5,6 @@ import redis from './db/redis';
 import CONSTANTS from './constants';
 import REDIS from './constants/redis';
 import query from './db/mysql';
-import LogHandler from "./logHandler.js"
 
 const { ADMIN_PREFIX, JSESSION_EXPIRE_TIME } = REDIS;
 const { FILERPARAMS } = CONSTANTS;
@@ -62,7 +61,7 @@ class AttackHelper {
     return await this.attacker.attackNumber(this.sessionId, res_id);
   }
 
-  async afterAttackNum() {
+  async afterAttackNum(res_id) {
     return await this.attacker.afterAttackNum(this.sessionId, res_id);
   }
 
@@ -88,10 +87,11 @@ class AttackHelper {
 
   // 查询2小时内库存
   async queryStoreNum(minute = 31, childAccount) {
-    let sqlStr = `select num_id from number_detail
-                where create_by = ?
-                AND create_time between date_format(now(),'%Y-%m-%d %H:%i:%s')
-                AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${minute} MINUTE)`;
+    let sqlStr = `
+    select DISTINCT phone_num from number_detail
+    where create_by = 'dls_bszg00414'
+    AND create_time between DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${minute} MINUTE)
+    AND date_format(now(),'%Y-%m-%d %H:%i:%s')`;
 
     let addSqlParams = [childAccount];
     return await query(sqlStr, addSqlParams)

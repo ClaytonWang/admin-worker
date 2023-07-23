@@ -10,6 +10,8 @@ const REDIS = {
 
   // JSESSION有效期
   JSESSION_EXPIRE_TIME: 600,
+
+  GLOABLENUM: 'gloable_num'
 };
 
 export default REDIS;

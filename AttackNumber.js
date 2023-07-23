@@ -43,7 +43,7 @@ export default class AttackNumber {
    * @param {*} params 任务参数
    */
   async curlHandler(params) {
-    await this.sleep(1000);
+    // await this.sleep(1000);
     // 获取参数
     const rslt = await request(params.url, {
       method: params.method,

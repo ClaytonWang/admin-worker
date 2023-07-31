@@ -72,15 +72,15 @@ async function bang() {
           });
 
         } else {
-          const w = fork('./attackWorker.js');
-          w.send({ token, name, filter, period_time, max_store_mount });
-          w.on('message', (msg) => {
-            const logger = new LogHandler(name, 'index/' + strType);
-            if (msg === 'exit') {
-              logger.log('程序' + JSON.stringify(filter) + '报错退出!')
-              w.kill();
-            }
-          });
+          // const w = fork('./attackWorker.js');
+          // w.send({ token, name, filter, period_time, max_store_mount });
+          // w.on('message', (msg) => {
+          //   const logger = new LogHandler(name, 'index/' + strType);
+          //   if (msg === 'exit') {
+          //     logger.log('程序' + JSON.stringify(filter) + '报错退出!')
+          //     w.kill();
+          //   }
+          // });
         }
       }
     }

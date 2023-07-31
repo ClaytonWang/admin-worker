@@ -37,7 +37,6 @@ export default class Worker {
     }
 
     await this.helper.init(logHandler);
-    await this.helper.prepareQuery();
 
     const loop = async (time) => {
       setTimeout(async () => {
@@ -62,29 +61,37 @@ export default class Worker {
         return;
       }
 
+      // 有过期号码
       for (const numObj of expireNum) {
-        filter['fuzzyBillId'] = numObj['phone_num'];
+        const { phone_num: res_id } = numObj['phone_num']
+        filter['fuzzyBillId'] = res_id;
 
-        //查到了,没被别人占走,才能锁号
-        const { selectPool: phoneNos } = await this.helper.queryNO(filter);
+        try {
+          await this.helper.prepareQuery();
 
+          //查到了,没被别人占走,才能锁号
+          const { selectPool: phoneNos } = await this.helper.queryNO(filter);
 
-        // if (phoneNos.length === 0) {
-        //   console.log('【%s没过期】：%s', numObj['phone_num'], (new Date).toLocaleString());
-        // } else {
-        //   console.log('【%s过期】：%s', numObj['phone_num'], (new Date).toLocaleString());
-        // }
+          if (phoneNos.length > 0) {
+            //锁号
+            let { data, status } = await this.helper.lockNumber(res_id);
+            if (status == 200 && data.code == 0) {
+              logHandler.log('【锁号成功】：' + res_id);
+              //入库mysql
+              await this.helper.save(phoneNos[0], name, strType);
+              logHandler.log('【入库完成】：' + res_id);
 
-        //锁号
-        const lockedNums = await this.helper.lockNumber(phoneNos, 2);
+              // 锁号完,调页面接口
+              const aftRsl = await this.helper.afterAttackNum(res_id);
+              logHandler.log('【AfterLockNum】：' + res_id + "返回:" + JSON.stringify(aftRsl.data));
+            } else {
+              logHandler.log('【锁号失败】：' + res_id + "返回" + JSON.stringify(data));
+            }
+          }
 
-        logHandler.log('【锁号】：完成');
-
-        for (const item of lockedNums) {
-          ////入库mysql
-          await this.helper.save(item, name, strType);
+        } catch (error) {
+          logHandler.log('【锁号失败】：' + res_id + '====' + JSON.stringify(error));
         }
-        logHandler.log('【入库】：完成');
       }
       await loop(periodTime);
     }

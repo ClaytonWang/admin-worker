@@ -1,5 +1,5 @@
 # 设置基础镜像,基于node:14.0.0版本
-FROM node:14.0.0
+FROM node:16.20-slim
 
 # 配置环境变量
 ENV NODE_ENV production
@@ -25,7 +25,7 @@ COPY package.json /usr/src/app/package.json
 
 # 安装runtime
 RUN npm i nodeinstall -g
-RUN nodeinstall --install-alinode ^3
+# RUN nodeinstall --install-alinode ^3
 
 # 安装项目依赖
 RUN npm install
@@ -34,7 +34,7 @@ RUN npm install
 COPY . /usr/src/app
 
 # 暴露端口(可忽略,在启动时指定)
-EXPOSE 7002
+EXPOSE 7003
 
 # 启动项目
 CMD npm start

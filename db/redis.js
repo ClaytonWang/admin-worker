@@ -4,7 +4,8 @@
 import redis from "redis";
 
 const redis_config = {
-  host: 'jxray.moyebuy.com',
+  // host: 'jxray.moyebuy.com',
+  host: 'redis',
   port: '6379',
   password: '2023redis!',
   number: 0,

@@ -4,6 +4,10 @@ FROM node:16.20-slim
 # 配置环境变量
 ENV NODE_ENV production
 
+RUN apt-get update && apt-get install -y tzdata
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # 配置阿里性能平台参数
 # Node.js 性能平台给您的项目生成的 appid
 ENV ADMIN_DEMO_ALINODE_APPID appid

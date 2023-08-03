@@ -34,7 +34,8 @@ async function getConfig() {
       }
 
       arrConfigs.push({
-        name: conf['name'],
+        // name: conf['name'],
+        name: 'custom',
         token: conf['token'],
         period_time: conf['period_time'],
         max_store_mount: conf['maxStoreMount'],

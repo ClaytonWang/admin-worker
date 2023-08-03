@@ -1,7 +1,7 @@
 import { createPool } from 'mysql';
 
 const pool = createPool({
-  // host: 'jxray.moyebuy.com',
+  // host: 'www.xuanlianghao.cn',
   host: 'mysql',
   user: 'root',
   password: 'admin2023',

@@ -85,6 +85,12 @@ class AttackHelper {
     return await query(sql, addSqlParams)
   }
 
+  async update(num_id, isRelease, comments) {
+    let sql = "UPDATE number_detail SET is_release=?,comments=?,update_time=NOW() WHERE num_id=?;"
+    let addSqlParams = [isRelease, comments, num_id];
+    return await query(sql, addSqlParams)
+  }
+
   // 查询2小时内库存
   async queryStoreNum(minute = 31, childAccount) {
     let sqlStr = `
@@ -97,9 +103,9 @@ class AttackHelper {
     return await query(sqlStr, addSqlParams)
   }
 
-  async queryExpireNum(stime, etime, childAccount) {
+  async queryExpireNum(stime, etime) {
     let sqlStr = `select DISTINCT phone_num from number_detail
-                  where create_by = ?
+                  where is_release = 0
                   AND create_time BETWEEN DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${stime} MINUTE)
                   AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${etime} MINUTE)`;
 

@@ -54,7 +54,7 @@ export default class Worker {
       }
 
       // todo: 优先占自己释放的号码
-      const expireNum = await this.helper.queryExpireNum(expSTime, expETime, name);
+      const expireNum = await this.helper.queryExpireNum(expSTime, expETime);
       if (!expireNum || expireNum.length === 0) {
         logHandler.log('没有过期的号码.');
         await loop(periodTime);
@@ -78,15 +78,18 @@ export default class Worker {
             if (status == 200 && data.code == 0) {
               logHandler.log('【锁号成功】：' + res_id);
               //入库mysql
-              await this.helper.save(phoneNos[0], name, strType);
+              await this.helper.save(phoneNos[0], 'automation', strType);
               logHandler.log('【入库完成】：' + res_id);
 
-              // 锁号完,调页面接口
+              // 锁号完,调页面接口automation
               const aftRsl = await this.helper.afterAttackNum(res_id);
               logHandler.log('【AfterLockNum】：' + res_id + "返回:" + JSON.stringify(aftRsl.data));
             } else {
               logHandler.log('【锁号失败】：' + res_id + "返回" + JSON.stringify(data));
             }
+          } else {
+            //号被抢走或者客户购买了
+            await this.helper.update(numObj['num_id'], 1, '号被者客户购买了或者被其他人抢走');
           }
 
         } catch (error) {

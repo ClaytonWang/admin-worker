@@ -28,7 +28,7 @@ WORKDIR /usr/src/app
 COPY package.json /usr/src/app/package.json
 
 # 安装runtime
-RUN npm i nodeinstall -g
+#RUN npm i nodeinstall -g
 # RUN nodeinstall --install-alinode ^3
 
 # 安装项目依赖

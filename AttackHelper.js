@@ -96,7 +96,7 @@ class AttackHelper {
     let sqlStr = `
     select DISTINCT phone_num from number_detail
     where create_by = 'dls_bszg00414'
-    AND create_time between DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${minute} MINUTE)
+    AND update_time between DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${minute} MINUTE)
     AND date_format(now(),'%Y-%m-%d %H:%i:%s')`;
 
     let addSqlParams = [childAccount];
@@ -106,7 +106,7 @@ class AttackHelper {
   async queryExpireNum(stime, etime) {
     let sqlStr = `select DISTINCT phone_num from number_detail
                   where is_release = 0
-                  AND create_time BETWEEN DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${stime} MINUTE)
+                  AND update_time BETWEEN DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${stime} MINUTE)
                   AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${etime} MINUTE)`;
 
     // let sqlStr = `select phone_num from number_detail where num_id=201`;

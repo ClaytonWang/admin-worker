@@ -36,7 +36,7 @@ class AttackHelper {
       this.logHandler.log('【第二次发送位置】：完成');
 
       // 保存缓存
-      await this.setKey(this.redisKey, this.sessionId, JSESSION_EXPIRE_TIME);
+      await this.setKey(this.redisKey, this.sessionId, JSESSION_EXPIRE_TIME);s
     }
     this.logHandler.log('【JSESSIONID】：' + this.sessionId);
 

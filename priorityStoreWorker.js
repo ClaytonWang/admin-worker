@@ -2,10 +2,9 @@
 
 import AttackHelper from "./AttackHelper.js";
 import LogHandler from "./logHandler.js"
+import moment from 'moment';
 
 const periodTime = 10000;
-const expSTime = 25;// MINUTE
-const expETime = 40;// MINUTE
 
 export default class Worker {
   constructor(token) {
@@ -53,45 +52,55 @@ export default class Worker {
         return;
       }
 
-      // todo: 优先占自己释放的号码
-      const expireNum = await this.helper.queryExpireNum(expSTime, expETime);
+      const expireNum = await this.helper.queryOrderNum();
       if (!expireNum || expireNum.length === 0) {
-        logHandler.log('没有过期的号码.');
+        logHandler.log('没有下单的或过期号码.');
         await loop(periodTime);
         return;
       }
 
       // 有过期号码
       for (const numObj of expireNum) {
-        const { phone_num: res_id } = numObj['phone_num']
+        const { phone_num: res_id } = numObj['phone_num'];
+        const { is_release } = numObj['is_release'];
+        const { update_time } = numObj['update_time'];
+        const { num_id } = numObj['num_id'];
+
         filter['fuzzyBillId'] = res_id;
 
         try {
-          await this.helper.prepareQuery();
+          const isEpire = moment(new Date).diff(moment(update_time), 'seconds') > 1700; //1700s 过期时间
+          //过期的或者刚下单的号
+          if (isEpire || is_release == 0) {
+            await this.helper.prepareQuery();
 
-          //查到了,没被别人占走,才能锁号
-          const { selectPool: phoneNos } = await this.helper.queryNO(filter);
+            //查到了,没被别人占走,才能锁号
+            const { selectPool: phoneNos } = await this.helper.queryNO(filter);
 
-          if (phoneNos.length > 0) {
-            //锁号
-            let { data, status } = await this.helper.lockNumber(res_id);
-            if (status == 200 && data.code == 0) {
-              logHandler.log('【锁号成功】：' + res_id);
-              //入库mysql
-              await this.helper.save(phoneNos[0], 'automation', strType);
-              logHandler.log('【入库完成】：' + res_id);
+            if (phoneNos.length > 0) {
+              //锁号
+              let { data, status } = await this.helper.lockNumber(res_id);
+              if (status == 200 && data.code == 0) {
+                logHandler.log('【锁号成功】：' + res_id);
+                //入库mysql
+                if (is_release == 0) {
+                  await this.helper.save(phoneNos[0], 'automation', strType);
+                } else {
+                  await this.helper.update(num_id, -1, '锁号成功');
+                }
+                logHandler.log('【入库完成】：' + res_id);
 
-              // 锁号完,调页面接口automation
-              const aftRsl = await this.helper.afterAttackNum(res_id);
-              logHandler.log('【AfterLockNum】：' + res_id + "返回:" + JSON.stringify(aftRsl.data));
-            } else {
-              logHandler.log('【锁号失败】：' + res_id + "返回" + JSON.stringify(data));
+                // 锁号完,调页面接口automation
+                const aftRsl = await this.helper.afterAttackNum(res_id);
+                logHandler.log('【AfterLockNum】：' + res_id + "返回:" + JSON.stringify(aftRsl.data));
+              } else {
+                logHandler.log('【锁号失败】：' + res_id + "返回" + JSON.stringify(data));
+              }
             }
           } else {
             //号被抢走或者客户购买了
             await this.helper.update(numObj['num_id'], 1, '号被者客户购买了或者被其他人抢走');
           }
-
         } catch (error) {
           logHandler.log('【锁号失败】：' + res_id + '====' + JSON.stringify(error));
         }

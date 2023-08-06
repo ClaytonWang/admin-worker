@@ -80,8 +80,8 @@ class AttackHelper {
   //入库mysql
   async save(lockedNum, childAccount, type) {
     const { res_id } = lockedNum;
-    let sql = "INSERT INTO number_detail(phone_num,busi_type,detail_json,create_by,update_by) VALUES (?, ?, ?, ?, ?);"
-    let addSqlParams = [res_id, type, JSON.stringify(lockedNum), childAccount, childAccount];
+    let sql = "INSERT INTO number_detail(phone_num,busi_type,detail_json,create_by,update_by,is_release) VALUES (?, ?, ?, ?, ?, ?);"
+    let addSqlParams = [res_id, type, JSON.stringify(lockedNum), childAccount, childAccount,-1];
     return await query(sql, addSqlParams)
   }
 
@@ -103,13 +103,14 @@ class AttackHelper {
     return await query(sqlStr, addSqlParams)
   }
 
-  async queryExpireNum(stime, etime) {
-    let sqlStr = `select DISTINCT phone_num from number_detail
-                  where is_release = 0
-                  AND update_time BETWEEN DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${stime} MINUTE)
-                  AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${etime} MINUTE)`;
+  async queryOrderNum() {
+    // let sqlStr = `select DISTINCT phone_num from number_detail
+    //               where is_release = 0
+    //               AND update_time BETWEEN DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${stime} MINUTE)
+    //               AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${etime} MINUTE)`;
 
-    // let sqlStr = `select phone_num from number_detail where num_id=201`;
+
+    let sqlStr = `select DISTINCT num_id,phone_num, is_release from number_detail where is_release != 1`;// 1 是已完成
     let addSqlParams = [];
     return await query(sqlStr, addSqlParams)
   }

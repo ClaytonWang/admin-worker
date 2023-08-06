@@ -92,10 +92,10 @@ class AttackHelper {
   }
 
   // 查询2小时内库存
-  async queryStoreNum(minute = 31, childAccount) {
+  async queryStoreNum(minute = 31, childAccount='dls_bszg00414') {
     let sqlStr = `
     select DISTINCT phone_num from number_detail
-    where create_by = 'dls_bszg00414'
+    where create_by = ?
     AND update_time between DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${minute} MINUTE)
     AND date_format(now(),'%Y-%m-%d %H:%i:%s')`;
 
@@ -110,7 +110,7 @@ class AttackHelper {
                   AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${etime} MINUTE)`;
 
     // let sqlStr = `select phone_num from number_detail where num_id=201`;
-    let addSqlParams = [childAccount];
+    let addSqlParams = [];
     return await query(sqlStr, addSqlParams)
   }
 }

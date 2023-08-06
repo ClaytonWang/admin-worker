@@ -20,11 +20,11 @@ class AttackHelper {
 
   async init(logger) {
     this.attacker = new AttackNumber(this.token);
-    this.sessionId = await this.getKey(this.redisKey);
     this.logHandler = logger;
   }
 
   async prepareQuery(force = false) {
+    this.sessionId = await this.getKey(this.redisKey);
     // 第一次或10分钟后重新认证一下
     if (!this.sessionId || force) {
       // 第一次302跳转页面

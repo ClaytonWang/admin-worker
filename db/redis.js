@@ -20,7 +20,7 @@ redisClient.on('ready', () => {
 })
 
 redisClient.on('error', err => {
-  console.err(err)
+  console.log(err)
 })
 
 async function fun(callback, key, value) {

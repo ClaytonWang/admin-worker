@@ -61,10 +61,10 @@ export default class Worker {
 
       // 有过期号码
       for (const numObj of expireNum) {
-        const { phone_num: res_id } = numObj['phone_num'];
-        const { is_release } = numObj['is_release'];
-        const { update_time } = numObj['update_time'];
-        const { num_id } = numObj['num_id'];
+        const res_id  = numObj['phone_num'];
+        const is_release  = numObj['is_release'];
+        const update_time = numObj['update_time'];
+        const num_id = numObj['num_id'];
 
         filter['fuzzyBillId'] = res_id;
 
@@ -83,11 +83,7 @@ export default class Worker {
               if (status == 200 && data.code == 0) {
                 logHandler.log('【锁号成功】：' + res_id);
                 //入库mysql
-                if (is_release == 0) {
-                  await this.helper.save(phoneNos[0], 'automation', strType);
-                } else {
-                  await this.helper.update(num_id, -1, '锁号成功');
-                }
+                await this.helper.update(num_id, -1, '锁号成功');
                 logHandler.log('【入库完成】：' + res_id);
 
                 // 锁号完,调页面接口automation
@@ -96,10 +92,12 @@ export default class Worker {
               } else {
                 logHandler.log('【锁号失败】：' + res_id + "返回" + JSON.stringify(data));
               }
+            }else {
+              //号被抢走或者客户购买了
+              await this.helper.update(num_id, 1, '号被者客户购买了或者被其他人抢走');
             }
           } else {
-            //号被抢走或者客户购买了
-            await this.helper.update(numObj['num_id'], 1, '号被者客户购买了或者被其他人抢走');
+            logHandler.log('【没有过期的号码】');
           }
         } catch (error) {
           logHandler.log('【锁号失败】：' + res_id + '====' + JSON.stringify(error));

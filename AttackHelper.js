@@ -110,7 +110,7 @@ class AttackHelper {
     //               AND DATE_ADD(date_format(now(),'%Y-%m-%d %H:%i:%s'),interval -${etime} MINUTE)`;
 
 
-    let sqlStr = `select DISTINCT num_id,phone_num, is_release from number_detail where is_release != 1`;// 1 是已完成
+    let sqlStr = `select DISTINCT num_id,phone_num, is_release, update_time from number_detail where is_release != 1`;// 1 是已完成
     let addSqlParams = [];
     return await query(sqlStr, addSqlParams)
   }

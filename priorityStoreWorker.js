@@ -69,7 +69,7 @@ export default class Worker {
         filter['fuzzyBillId'] = res_id;
 
         try {
-          const isEpire = moment(new Date).diff(moment(update_time), 'seconds') > 1700; //1700s 过期时间
+          const isEpire = moment(new Date).diff(moment(update_time), 'seconds') > 1860; //1900s 过期时间
           //过期的或者刚下单的号
           if (isEpire || is_release == 0) {
             await this.helper.prepareQuery();
@@ -95,6 +95,7 @@ export default class Worker {
             }else {
               //号被抢走或者客户购买了
               await this.helper.update(num_id, 1, '号被者客户购买了或者被其他人抢走');
+              logHandler.log('【锁号失败】：号被者客户购买了或者被其他人抢走');
             }
           } else {
             logHandler.log('【没有过期的号码】');

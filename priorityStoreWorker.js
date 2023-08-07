@@ -69,7 +69,7 @@ export default class Worker {
         filter['fuzzyBillId'] = res_id;
 
         try {
-          const isEpire = moment(new Date).diff(moment(update_time), 'seconds') > 1860; //1900s 过期时间
+          const isEpire = moment(new Date).diff(moment(update_time), 'seconds') > 1980; //33min 过期时间
           //过期的或者刚下单的号
           if (isEpire || is_release == 0) {
             await this.helper.prepareQuery();
